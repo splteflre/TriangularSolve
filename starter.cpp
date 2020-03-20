@@ -27,19 +27,33 @@
  }
 
 //TODO1: parallel sptrsv_csc
-void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, std::map<int, std::vector<int>> &lvl_set) {
-    int i, j;
-    for (i = 0; i < n; i++) {
-        x[i] /= Lx[Lp[i]];
-        #pragma omp parallel
-        {
-            #pragma omp parallel for schedule(static) 
-            for (j = Lp[i] + 1; j < Lp[i + 1]; j++) {
-                    x[Li[j]] -= Lx[j] * x[i];
+void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nlev, int *ilev, int *jlev) {
+    int m, j, k, i;
+    //printf("\nnlev: %d\n", nlev);
+    
+    /*printf("[");
+    for(int i = 0; i < n; i++){
+        printf("%f, ", x[i]);
+    }
+    printf("]\n");*/
+
+    for(m = 0; m < nlev; m++){
+        #pragma omp parallel for schedule(static)
+        for(k = ilev[m]; k < ilev[m+1]; k++){
+            i = jlev[k];
+            x[i] /= Lx[Lp[i]]; 
+            for(j = Lp[i] + 1; j < Lp[i+1]; j++){
+                #pragma omp atomic
+                x[Li[j]] -= Lx[j] * x[i];
             }
         }
     }
- }
+    printf("[");
+    for(int i = 0; i < n; i++){
+        printf("%f, ", x[i]);
+    }
+    printf("]\n");
+}
 
 /*
 * Computes y = A*x where A is a sparse matrix {n, Ap, Ai, Ax} and 
@@ -62,22 +76,30 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, std::ma
 
 //TODO4: Serial spmv_csr
 
-void create_csc(char *matrix, char *b, int *Lp, int *Li, double *Lx, int &n, double *x, std::vector<int> &non_zero, std::map<int, std::vector<int>> &adj_list){
-    int R, C, r, c;
+void print(int* array, int sz){
+    printf(" [");
+    for(int i = 0; i < sz; i++){
+        printf("%d, ", array[i]);
+    }
+    printf("]\n");
+}
+
+void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, double **x, int **levels, int **jlev, int **ilev, int &nlev){
+    int R, C, r, c, num_entry;
     double data;
 
     // Read answer vector 'b' to find non-zeros 
     std::ifstream bin(b);
     while (bin.peek() == '%') bin.ignore(2048, '\n');  // Ignore comments
 
-    bin >> R >> C >> n;
-    x = new double[R]; 
-    std::fill(x, x + R, 0.);
+    bin >> R >> C >> num_entry;
+    *x = new double[R]; 
+    std::fill(*x, *x + R, 0.);
 
-    for(int i = 0; i < n; i++){
+    for(int i = 0; i < num_entry; i++){
         bin >> r >> c >> data;
-        x[r-1] = data;
-        non_zero.push_back(r-1);
+        (*x)[r-1] = data;
+        //non_zero.push_back(r-1);
     }
 
     // Read lower triangular matrix
@@ -85,164 +107,58 @@ void create_csc(char *matrix, char *b, int *Lp, int *Li, double *Lx, int &n, dou
     while (fin.peek() == '%') fin.ignore(2048, '\n');  // Ignore comments
 
     // Initialize Lx and fill with zero
-    fin >> R >> C >> n;   
-    Lp = new int[R];                    // Array for storing the diagonal entries' index in Lx
-    Li = new int[n];                    // Array for storing the row of entry in Lx
-    Lx = new double[n];	                // Array for storing all the non zeros in the matrix
+    fin >> R >> C >> num_entry;   
+    n = R;
+    *Lp = new int[n];                    // Array for storing the diagonal entries' index in Lx
+    *Li = new int[num_entry];                    // Array for storing the row of entry in Lx
+    *Lx = new double[num_entry];	                // Array for storing all the non zeros in the matrix
 
-    for(int i = 0; i < n; i++){
+    for(int i = 0; i < num_entry; i++){
         fin >> r >> c >> data;
-        Lx[i] = data;
-        Li[i] = r-1;
+        (*Lx)[i] = data;
+        (*Li)[i] = r-1;
         if (r == c){
-          Lp[r-1] = i;
+          (*Lp)[r-1] = i;
         }
-        adj_list[c-1].push_back(r-1);
     }   
-
-    //TODO create working set by iterating over nonzero and Lx and add to a set then iterate over the set instead of R
-    /*std::set<int> it_space;
-    std::set<int>::iterator it;
-    std::pair<std::set<int>::iterator,bool> ret;
-
-    for(int i = 0; i < non_zero.size(); i++){
-        for(int j = Lp[non_zero[i]]; j < Lp[non_zero[i]+1]; j++){
-            if(it_space.empty()){
-                ret = it_space.insert(Li[j]);
-            }else{
-                ret = it_space.insert(it, Li[j]);
-                if (ret.second==false) it=ret.first;
-            }   
-        }
-    }
-
-    int t, l, nlev = 0;
-    int *levels = new int[R];
-    std::fill(levels, levels+R, 0);
-
-    for(auto i : it_space){
-       l = levels[i] + 1; 
-       for(int j = Lp[i]; j < Lp[i + 1]; j++){
-           t = max(l, levels[Li[j]]);
-           nlev = max(nlev, t);
-           levels[Li[j]] = t;
-       }
-    }*/
     
-    int t, l, nlev = 0;
-    int levels[R] = {0};
+    int t, l = 0;
+    nlev = 0;     
+    *levels = new int[n];    // array that contains the level for each unknown at index i in the array
 
-    for(int i = 0; i < R; i ++){
-       l = levels[i] + 1;     
-       for(int j = Lp[i]; j < Lp[i + 1]; j++){
-           t = std::max(l, levels[Li[j]]);
+    for(int i = 0; i < n; i++){
+       l = (*levels)[i] + 1;     
+       for(int j = (*Lp)[i]; j < (*Lp)[i + 1]; j++){
+           t = std::max(l, (*levels)[(*Li)[j]]);
            nlev = std::max(nlev, t);
-           levels[Li[j]] = t;
+           (*levels)[(*Li)[j]] = t;
        }
     }
-
-    levels[R-1] += 1;
+    (*levels)[n-1] += 1;
+    nlev = std::max(nlev, (*levels)[n-1]);
     
+    (*jlev) = new int[n];  // array that denotes the unknowns in ascending order of their levels
+    (*ilev) = new int[nlev+1];  // array that contains the pointers to the start of the ith level
+    int cnt = 0;             // counter used for keeping track of position in jlev
+    std::fill(*jlev, *jlev+n, 0);
+    std::fill(*ilev, *ilev+nlev+1, 0);
 
+    (*ilev)[nlev] = n;
 
-    printf("Lx: [");
-    for(int i = 0; i < n; i++){
-        std::cout << Lx[i] << ", ";
-    }
-    printf("]\n");
+    for(int i = 1; i <= nlev; i++){
 
-    printf("Lp: [");
-    for(int i = 0; i < R; i++){
-        std::cout << Lp[i] << ", ";
-    }
-    printf("]\n");
+       (*ilev)[i-1] = cnt; 
 
-    printf("Li: [");
-    for(int i = 0; i < n; i++){
-        std::cout << Li[i] << ", ";
-    }
-    printf("]\n");
-
-    printf("adj_list: [\n");
-    for(int i = 0; i < adj_list.size(); i++){
-        std::cout << i+1 << ": ";
-        for(int j = 0; j < adj_list[i].size(); j++){
-            std::cout << adj_list[i][j] << ", ";
-        }
-        std::cout << std::endl;
-    }
-    printf("]\n");
-
-    printf("non_zero [");
-    for(int i = 0; i < non_zero.size(); i++){
-        std::cout << non_zero[i] << ", ";
-    }
-    printf("]\n");
-
-    printf("levels: [");
-    for(int i = 0; i < R; i++){
-        if(levels[i] > 0){
-            std::cout << "i[" << i << "]: " << levels[i] << ", ";
-        }
-    }
-    printf("]\n");
-}
-
-void create_lvl_set(std:: vector<int> non_zero, std::map<int, std::vector<int>> &adj_list, std::map<int, std::vector<int>> &lvl_set){
-    int level[adj_list.size()] = {0};
-
-    #pragma omp parallel
-    {
-        int priv_lvl[adj_list.size()] = {0};
-        std::stack<int> visited;
-
-        // Run dfs on all non zero entry in solution vector 'b'
-        #pragma omp for
-        for(int i = 0; i < non_zero.size(); i++){
-           visited.push(non_zero[i]);
-
-           while(!visited.empty()){
-               int curr = visited.top();
-               visited.pop();
-               priv_lvl[curr]++;
-
-               auto al = adj_list[curr];
-               for(auto it : al){
-                   if(it != curr){
-                       visited.push(it);
-                   }
-               }
+       for(int j = 0; j < n; j++){
+           if((*levels)[j] == i){
+               (*jlev)[cnt] = j;
+               cnt++;
            }
-        }
-
-        printf("@@@@@@ OUT AFTER @@@@@@@\n");
-
-        #pragma omp critical
-        for (int n = 0; n < adj_list.size(); n++){
-            level[n] += priv_lvl[n];
-        }
-    }
-
-    printf(";alskjfk;asflajfl;s");
-
-    // Scan level array to create lvl set
-    for(int i = 0; i < adj_list.size(); i++){
-        if(level[i] != 0){
-            lvl_set[level[i]-1].push_back(i);
-        }
-    }
-
-    printf("Level set:\n");
-    for(int i = 0; i < lvl_set.size(); i++){
-        std::cout << "lvl " << i << ": ";
-        for(int j = 0; j < lvl_set[i].size(); j++){
-            std::cout << lvl_set[i][j] << " ";
-        }
-        std::cout << std::endl;
+       }
     }
 }
 
- int main(int argc, char *argv[]){
+int main(int argc, char *argv[]){
     
     printf("argc: %d\n", argc);
     if(argc != 3){
@@ -250,32 +166,37 @@ void create_lvl_set(std:: vector<int> non_zero, std::map<int, std::vector<int>> 
         return 0;
     }
 
- 	//TODO: read a matrix from Suite sparse matrix repo
+    //TODO: read a matrix from Suite sparse matrix repo
     double *Lx, *x;
-    int *Lp, *Li, n;
+    int *Lp, *Li, *levels, *jlev, *ilev, n, nlev;       // nlev is the number of levels
     std::vector<int> non_zero;
-    std::map<int, std::vector<int>> adj_list;
     std::map<int, std::vector<int>> lvl_set;
-    create_csc(argv[1], argv[2], Lp, Li, Lx, n, x, non_zero, adj_list);
-    printf("@@@@@@@@ done scanning @@@@@@@@\n");
-    printf("non_zero sz: %d\n", (int)non_zero.size());
-    
-    /* 
-    printf("non_zero [");
-    for(int i = 0; i < non_zero.size(); i++){
-        std::cout << non_zero[i] << ", ";
-    }
-    printf("]\n");
-    */
-   
-   // create_lvl_set(non_zero, adj_list, lvl_set);
+    create_csc(argv[1], argv[2], &Lp, &Li, &Lx, n, &x, &levels, &jlev, &ilev, nlev);
 
- 	//TODO: Does a triangular solve
-  
-
-
- 	//TODO: sanity check using spmv
+    printf("Lp: ");
+    print(levels, n);
+    printf("\n jlev: ");
+    print(jlev, n);
+    printf("\n ilev: ");
+    print(ilev, nlev+1);
 
     
- 	return 1;
- }
+    parallel_sptrsv_csc(n, Lp, Li, Lx, x, nlev, ilev, jlev);
+    /*
+    printf("%d", Li[1]);
+    for(int i = 0; i < num_entry; i++){
+        std::cout << "Li: " << Li[i] << "Lx: " << Lx[i] << std::endl;
+    }*/
+    //parallel_sptrsv_csc(n, Lp, Li, Lx, x, lvl_set);
+
+
+    //TODO: Does a triangular solve
+    //parallel_sptrsv_csc(n, Lp, Li, Lx, x, lvl_set); 
+
+
+
+    //TODO: sanity check using spmv
+
+
+    return 1;
+}
