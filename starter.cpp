@@ -10,6 +10,14 @@
 #include <omp.h>
 
 
+void print(double* array, int sz){
+    printf(" [");
+    for(int i = 0; i < sz; i++){
+        printf("%f, ", array[i]);
+    }
+    printf("]\n");
+}
+
 /*      
 * Solves a sparse lower triangular solve (Lx=b) which is stored in CSC format.
 * The sparse matrix is stored in {n, Lp, Li, Lx}
@@ -29,13 +37,6 @@
 //TODO1: parallel sptrsv_csc
 void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nlev, int *ilev, int *jlev) {
     int m, j, k, i;
-    //printf("\nnlev: %d\n", nlev);
-    
-    /*printf("[");
-    for(int i = 0; i < n; i++){
-        printf("%f, ", x[i]);
-    }
-    printf("]\n");*/
 
     for(m = 0; m < nlev; m++){
         #pragma omp parallel for schedule(static)
@@ -48,11 +49,8 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nle
             }
         }
     }
-    printf("[");
-    for(int i = 0; i < n; i++){
-        printf("%f, ", x[i]);
-    }
-    printf("]\n");
+    printf("x: ");
+    print(x, n);
 }
 
 /*
@@ -76,13 +74,6 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nle
 
 //TODO4: Serial spmv_csr
 
-void print(int* array, int sz){
-    printf(" [");
-    for(int i = 0; i < sz; i++){
-        printf("%d, ", array[i]);
-    }
-    printf("]\n");
-}
 
 void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, double **x, int **levels, int **jlev, int **ilev, int &nlev){
     int R, C, r, c, num_entry;
@@ -121,10 +112,17 @@ void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, 
           (*Lp)[r-1] = i;
         }
     }   
-    
-    int t, l = 0;
+
+    *levels = new int[n];
+    (*jlev) = new int[n];       // array that denotes the unknowns in ascending order of their levels
+    (*ilev) = new int[nlev+1];  // array that contains the pointers to the start of the ith level
+    std::fill(*jlev, *jlev+n, 0);
+    std::fill(*ilev, *ilev+nlev+1, 0);
+}
+
+void create_level_set(int n, int **Lp, int **Li, int **levels, int **jlev, int **ilev, int &nlev){
+    int t, cnt = 0, l = 0;
     nlev = 0;     
-    *levels = new int[n];    // array that contains the level for each unknown at index i in the array
 
     for(int i = 0; i < n; i++){
        l = (*levels)[i] + 1;     
@@ -136,13 +134,6 @@ void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, 
     }
     (*levels)[n-1] += 1;
     nlev = std::max(nlev, (*levels)[n-1]);
-    
-    (*jlev) = new int[n];  // array that denotes the unknowns in ascending order of their levels
-    (*ilev) = new int[nlev+1];  // array that contains the pointers to the start of the ith level
-    int cnt = 0;             // counter used for keeping track of position in jlev
-    std::fill(*jlev, *jlev+n, 0);
-    std::fill(*ilev, *ilev+nlev+1, 0);
-
     (*ilev)[nlev] = n;
 
     for(int i = 1; i <= nlev; i++){
@@ -172,21 +163,9 @@ int main(int argc, char *argv[]){
     std::vector<int> non_zero;
     std::map<int, std::vector<int>> lvl_set;
     create_csc(argv[1], argv[2], &Lp, &Li, &Lx, n, &x, &levels, &jlev, &ilev, nlev);
-
-    printf("Lp: ");
-    print(levels, n);
-    printf("\n jlev: ");
-    print(jlev, n);
-    printf("\n ilev: ");
-    print(ilev, nlev+1);
-
-    
+    create_level_set(n, &Lp, &Li, &levels, &jlev, &ilev, nlev);
     parallel_sptrsv_csc(n, Lp, Li, Lx, x, nlev, ilev, jlev);
-    /*
-    printf("%d", Li[1]);
-    for(int i = 0; i < num_entry; i++){
-        std::cout << "Li: " << Li[i] << "Lx: " << Lx[i] << std::endl;
-    }*/
+    
     //parallel_sptrsv_csc(n, Lp, Li, Lx, x, lvl_set);
 
 
