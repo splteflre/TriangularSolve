@@ -44,18 +44,19 @@ void sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x) {
 }
 
 //TODO1: parallel sptrsv_csc
-void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nlev, int *ilev, int *jlev) {
+void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double **x, int nlev, int *ilev, int *jlev) {
     int m, j, k, i;
 
     double start_time= omp_get_wtime();
+
     for(m = 0; m < nlev; m++){
         #pragma omp parallel for schedule(static)
         for(k = ilev[m]; k < ilev[m+1]; k++){
             i = jlev[k];
-            x[i] /= Lx[Lp[i]]; 
+            (*x)[i] /= Lx[Lp[i]]; 
             for(j = Lp[i] + 1; j < Lp[i+1]; j++){
-                #pragma omp atomic
-                x[Li[j]] -= Lx[j] * x[i];
+                //#pragma omp atomic
+                (*x)[Li[j]] -= Lx[j] * (*x)[i];
             }
         }
     }
@@ -71,17 +72,13 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nle
 */
   void spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
                const double *x, double *y) {
+     
     int i, j;
     for (i = 0; i < n; i++) {
         for (j = Ap[i]; j < Ap[i + 1]; j++) {
             y[Ai[j]] += Ax[j] * x[i];
         }
     }  
-
-    for(int i = 0; i < n; i++){
-        printf("%f ", y[i]);
-    }
-
  }
 
 //TODO2: parallel spmv_csc
@@ -119,9 +116,10 @@ void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, 
     // Initialize Lx and fill with zero
     fin >> R >> C >> num_entry;   
     n = R;
-    *Lp = new int[n];                    // Array for storing the diagonal entries' index in Lx
+    *Lp = new int[n+1];                    // Array for storing the diagonal entries' index in Lx
     *Li = new int[num_entry];                    // Array for storing the row of entry in Lx
     *Lx = new double[num_entry];	                // Array for storing all the non zeros in the matrix
+    (*Lp)[n] = num_entry; 
 
     for(int i = 0; i < num_entry; i++){
         fin >> r >> c >> data;
@@ -139,6 +137,7 @@ void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, 
     }   
 
     std::sort(non_zero.begin(), non_zero.end());
+
 }
 
 void create_level_set(int n, int **Lp, int **Li, int **levels, int **jlev, int **ilev, int &nlev, std::vector<int> non_zero){
@@ -192,16 +191,16 @@ int main(int argc, char *argv[]){
     std::vector<int> non_zero;
     std::map<int, std::vector<int>> lvl_set;
     create_csc(argv[1], argv[2], &Lp, &Li, &Lx, n, &x, non_zero);
-
     create_level_set(n, &Lp, &Li, &levels, &jlev, &ilev, nlev, non_zero);
+
     double y[n] = {0};
     for(int i = 0; i < n; i++){
        y[i] = x[i]; 
     }
 
     //TODO: Does a triangular solve
-    parallel_sptrsv_csc(n, Lp, Li, Lx, x, nlev, ilev, jlev);
-
+    //sptrsv_csc(n, Lp, Li, Lx, x);
+    parallel_sptrsv_csc(n, Lp, Li, Lx, &x, nlev, ilev, jlev);
 
     //TODO: sanity check using spmv
     double tmp[n] = {0};
@@ -210,7 +209,7 @@ int main(int argc, char *argv[]){
     printf("\n");
     for(int i = 0; i < n; i++){
         if (tmp[i] != y[i]){
-            printf("\nfuck\n");
+            printf("\n i: %d fuck\n", i);
             return 0;
         }
     }
