@@ -57,7 +57,7 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double **x, int nl
             i = jlev[k];
             (*x)[i] /= Lx[Lp[i]]; 
             for(j = Lp[i] + 1; j < Lp[i+1]; j++){
-                //#pragma omp atomic
+                #pragma omp atomic
                 (*x)[Li[j]] -= Lx[j] * (*x)[i];
             }
         }
@@ -72,16 +72,16 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double **x, int nl
 * Computes y = A*x where A is a sparse matrix {n, Ap, Ai, Ax} and 
 * x and y are vectors
 */
-  void spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
-               const double *x, double *y) {
-     
+void spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
+        const double *x, double *y) {
+
     int i, j;
     for (i = 0; i < n; i++) {
         for (j = Ap[i]; j < Ap[i + 1]; j++) {
             y[Ai[j]] += Ax[j] * x[i];
         }
     }  
- }
+}
 
 //TODO2: parallel spmv_csc
 
@@ -180,6 +180,7 @@ void create_level_set(int n, int **Lp, int **Li, int **levels, int **jlev, int *
 }
 
 /*
+ * Default double comparison is not accurate enough using the code comparison found here instead:
  * https://stackoverflow.com/questions/17333/what-is-the-most-effective-way-for-float-and-double-comparison
  */
 bool AreSame(double a, double b, double EPSILON)
@@ -202,6 +203,7 @@ int main(int argc, char *argv[]){
     create_csc(argv[1], argv[2], &Lp, &Li, &Lx, n, &x, non_zero);
     create_level_set(n, &Lp, &Li, &levels, &jlev, &ilev, nlev, non_zero);
 
+    //Copying right handside vector for sanity check
     double *y = new double[n];
     for(int i = 0; i < n; i++){
        y[i] = x[i]; 
@@ -215,10 +217,6 @@ int main(int argc, char *argv[]){
     //double tmp[n] = {0};
     //spmv_csc(n, Lp, Li, Lx, x, tmp);
     
-   // for(int i = 0; i < n; i++){
-   //     printf(" %f", tmp[i]);
-   // }
-   // printf("\n");
     double epsilon = 128 * FLT_EPSILON;
     for(int i = 0; i < n; i++){
         if (!AreSame(x[i], y[i], epsilon)){
@@ -227,7 +225,7 @@ int main(int argc, char *argv[]){
             return 0;
         }
     }
-    printf("we gucci\n");
+    printf("\nwe gucci\n");
 
     return 1;
 }
