@@ -40,7 +40,6 @@ void sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double **x) {
     }
     double end_time = omp_get_wtime();
     double elapsed_time = end_time - start_time;
-
     printf("total time: %f\n", elapsed_time);
 
 }
