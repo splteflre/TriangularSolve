@@ -25,15 +25,15 @@ void print(int* array, int sz){
 * x is in/out. It is initially b and at the end it has the solution.
 */
 
-void sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x) {
+void sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double **x) {
     int i, j;
 
     //double start_time= omp_get_wtime();
     clock_t begin = clock();
     for (i = 0; i < n; i++) {
-        x[i] /= Lx[Lp[i]];
+        (*x)[i] /= Lx[Lp[i]];
         for (j = Lp[i] + 1; j < Lp[i + 1]; j++) {
-            x[Li[j]] -= Lx[j] * x[i];
+            (*x)[Li[j]] -= Lx[j] * (*x)[i];
         }
     }
     clock_t end = clock();
@@ -177,6 +177,14 @@ void create_level_set(int n, int **Lp, int **Li, int **levels, int **jlev, int *
     }
 }
 
+/*
+ * https://stackoverflow.com/questions/17333/what-is-the-most-effective-way-for-float-and-double-comparison
+ */
+bool AreSame(double a, double b)
+{
+    return fabs(a - b) < EPSILON;
+}
+
 int main(int argc, char *argv[]){
     
     printf("argc: %d\n", argc);
@@ -189,30 +197,34 @@ int main(int argc, char *argv[]){
     double *Lx, *x;
     int *Lp, *Li, *levels, *jlev, *ilev, n, nlev;       // nlev is the number of levels
     std::vector<int> non_zero;
-    std::map<int, std::vector<int>> lvl_set;
     create_csc(argv[1], argv[2], &Lp, &Li, &Lx, n, &x, non_zero);
     create_level_set(n, &Lp, &Li, &levels, &jlev, &ilev, nlev, non_zero);
 
-    double y[n] = {0};
+    double *y = new double[n];
     for(int i = 0; i < n; i++){
        y[i] = x[i]; 
     }
 
     //TODO: Does a triangular solve
-    //sptrsv_csc(n, Lp, Li, Lx, x);
-    parallel_sptrsv_csc(n, Lp, Li, Lx, &x, nlev, ilev, jlev);
+    sptrsv_csc(n, Lp, Li, Lx, &x);
+    parallel_sptrsv_csc(n, Lp, Li, Lx, &y, nlev, ilev, jlev);
 
     //TODO: sanity check using spmv
-    double tmp[n] = {0};
-    spmv_csc(n, Lp, Li, Lx, x, tmp);
+    //double tmp[n] = {0};
+    //spmv_csc(n, Lp, Li, Lx, x, tmp);
     
-    printf("\n");
+   // for(int i = 0; i < n; i++){
+   //     printf(" %f", tmp[i]);
+   // }
+   // printf("\n");
     for(int i = 0; i < n; i++){
-        if (tmp[i] != y[i]){
-            printf("\n i: %d fuck\n", i);
+        if (x[i] != y[i]){
+            printf("\n i: %d \n", i);
+            printf("sptrsv: %f, para: %f", x[i], y[i]);
             return 0;
         }
     }
+    printf("we gucci\n");
 
     return 1;
 }
