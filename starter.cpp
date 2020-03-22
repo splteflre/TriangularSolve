@@ -9,6 +9,8 @@
 #include <set>
 #include <map>
 #include <omp.h>
+#include <math.h>
+#include <cfloat>
 
 
 void print(int* array, int sz){
@@ -180,7 +182,7 @@ void create_level_set(int n, int **Lp, int **Li, int **levels, int **jlev, int *
 /*
  * https://stackoverflow.com/questions/17333/what-is-the-most-effective-way-for-float-and-double-comparison
  */
-bool AreSame(double a, double b)
+bool AreSame(double a, double b, double EPSILON)
 {
     return fabs(a - b) < EPSILON;
 }
@@ -217,8 +219,9 @@ int main(int argc, char *argv[]){
    //     printf(" %f", tmp[i]);
    // }
    // printf("\n");
+    double epsilon = 128 * FLT_EPSILON;
     for(int i = 0; i < n; i++){
-        if (x[i] != y[i]){
+        if (!AreSame(x[i], y[i], epsilon)){
             printf("\n i: %d \n", i);
             printf("sptrsv: %f, para: %f", x[i], y[i]);
             return 0;
