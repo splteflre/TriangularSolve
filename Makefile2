@@ -1,0 +1,16 @@
+# Makefile for Lower Triangular solve
+
+# *****************************************************
+# Variables to control Makefile operation
+
+CPP = g++
+CPPFLAGS = -Wall -O3 -fopenmp
+
+# ****************************************************
+# Targets needed to bring the executable up to date
+
+starter: starter.cpp
+	$(CPP) $(CPPFLAGS) starter.cpp -o starter 
+
+clean:
+	rm starter
