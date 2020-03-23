@@ -1,26 +1,4 @@
-#include <iostream>
-#include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <fstream>
-#include <algorithm> 
-#include <vector>
-#include <stack>
-#include <set>
-#include <map>
-#include <omp.h>
-#include <math.h>
-#include <cfloat>
-
-using namespace std;
-
-void print(int* array, int sz){
-    printf(" [");
-    for(int i = 0; i < sz; i++){
-        printf("%d, ", array[i]);
-    }
-    printf("]\n");
-}
+#include "starter.h"
 
 /*      
 * Solves a sparse lower triangular solve (Lx=b) which is stored in CSC format.
@@ -116,6 +94,7 @@ void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, 
         non_zero.push_back(r-1);
         visited[r-1] = 1;
     }
+    bin.close();
 
     // Read lower triangular matrix
     std::ifstream fin(matrix);
@@ -143,6 +122,8 @@ void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, 
             non_zero.push_back(r-1);
         }
     }   
+    fin.close();
+
     std::sort(non_zero.begin(), non_zero.end());
 
 }
@@ -197,10 +178,13 @@ void create_level_set(int n, int **Lp, int **Li, int **jlev, int **ilev, int &nl
  */
 bool AreSame(double a, double b, double epsilon)
 {
+    // Testing different floating point comparison methods
     //if (a == b) return true;
-    /*auto diff = abs(a-b);
-    auto norm = min((abs(a) + abs(b)), numeric_limits<double>::max());
-    return diff < max(relth, epsilon * norm);*/
+    //double relth = FLT_MIN;
+    //auto diff = abs(a-b);
+    //auto norm = min((abs(a) + abs(b)), numeric_limits<double>::max());
+    //return diff < max(relth, epsilon * norm);
+
     return fabs(a - b) < epsilon;
 }
 
