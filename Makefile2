@@ -7,9 +7,8 @@ CPP = g++
 CPPFLAGS = -Wall -O3 -fopenmp
 
 # ****************************************************
-# Targets needed to bring the executable up to date
 
-starter: starter.cpp
+starter: starter.cpp starter.h
 	$(CPP) $(CPPFLAGS) starter.cpp -o starter 
 
 clean:
