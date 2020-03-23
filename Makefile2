@@ -8,10 +8,10 @@ CPPFLAGS = -Wall -O3 -fopenmp
 
 # ****************************************************
 
-starter: main.o matrix_solve.o util.o
+solve: main.o matrix_solve.o util.o
 	$(CPP) $(CPPFLAGS) -o solve main.o matrix_solve.o util.o 
 
-main.o: main.cpp util.h matrix_solve/matrix_solve.h
+main.o: main.cpp util/util.h matrix_solve/matrix_solve.h
 	$(CPP) $(CPPFLAGS) -c main.cpp 
 
 matrix_solve.o: matrix_solve/matrix_solve.cpp matrix_solve/matrix_solve.h
