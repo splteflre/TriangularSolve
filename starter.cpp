@@ -45,7 +45,7 @@ void sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double **x) {
 }
 
 //TODO1: parallel sptrsv_csc
-void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double **x, int nlev, int *ilev, int *jlev) {
+void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nlev, int *ilev, int *jlev) {
     int m, j, k, i;
 
     double start_time= omp_get_wtime();
@@ -53,16 +53,20 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double **x, int nl
         #pragma omp parallel for schedule(static)
         for(k = ilev[m]; k < ilev[m+1]; k++){
             i = jlev[k];
-            (*x)[i] /= Lx[Lp[i]]; 
+            x[i] /= Lx[Lp[i]]; 
             for(j = Lp[i] + 1; j < Lp[i+1]; j++){
                 #pragma omp atomic
-                (*x)[Li[j]] -= Lx[j] * (*x)[i];
+                x[Li[j]] -= Lx[j] * x[i];
             }
         }
     }
     double end_time = omp_get_wtime();
     double elapsed_time = end_time - start_time;
     printf("total time: %f\n", elapsed_time);
+
+    // Free jlev and ilev since they are no longer needed
+    delete[] jlev;
+    delete[] ilev;
 
 }
 
@@ -94,6 +98,7 @@ void spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
 void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, double **x, std::vector<int> &non_zero){
     int R, C, r, c, num_entry;
     double data;
+    int *visited;
 
     // Read answer vector 'b' to find non-zeros 
     std::ifstream bin(b);
@@ -101,8 +106,9 @@ void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, 
 
     bin >> R >> C >> num_entry;
     *x = new double[R]; 
-    int visited[R] = {0};
+    visited = new int[R];
     std::fill(*x, *x + R, 0.);
+    std::fill(visited, visited + R, 0);
 
     for(int i = 0; i < num_entry; i++){
         bin >> r >> c >> data;
@@ -145,29 +151,28 @@ void create_csc(char *matrix, char *b, int **Lp, int **Li, double **Lx, int &n, 
  * Create level sets as described in the sympiler paper
  *
  */
-void create_level_set(int n, int **Lp, int **Li, int **levels, int **jlev, int **ilev, int &nlev, std::vector<int> non_zero){
+void create_level_set(int n, int **Lp, int **Li, int **jlev, int **ilev, int &nlev, std::vector<int> non_zero){
     int i, j, t, cnt = 0, l = 0;
+    int *levels = new int[n];               // Array that maps the known at index i to its level 
     nlev = 0;     
 
-    *levels = new int[n];
     (*jlev) = new int[n];
-    std::fill(*levels, *levels + n, 0);
+    std::fill(levels, levels + n, 0);
     std::fill(*jlev, *jlev + n, 0);
-    std::vector<int>::iterator it = non_zero.begin();
 
     // Create the level set for all unknowns whose position in the right handside vector is either
     // a non zero or is affected by a non zero unknown. tldr: create level set for all non zero unknown
-    for(; it != non_zero.end(); it++){
+    for(auto it = non_zero.begin(); it != non_zero.end(); it++){
        i = *it;
-       l = (*levels)[i] + 1;     
+       l = levels[i] + 1;     
        for(int j = (*Lp)[i]; j < (*Lp)[i + 1]; j++){
-           t = std::max(l, (*levels)[(*Li)[j]]);
+           t = std::max(l, levels[(*Li)[j]]);
            nlev = std::max(nlev, t);
-           (*levels)[(*Li)[j]] = t;
+           levels[(*Li)[j]] = t;
        }
     }
-    (*levels)[n-1] += 1;
-    nlev = std::max(nlev, (*levels)[n-1]);
+    levels[n-1] += 1;
+    nlev = std::max(nlev, levels[n-1]);
 
     (*ilev) = new int[nlev+1];
     std::fill(*ilev, *ilev + nlev + 1, 0);
@@ -177,26 +182,26 @@ void create_level_set(int n, int **Lp, int **Li, int **levels, int **jlev, int *
     for(i = 1; i <= nlev; i++){
        (*ilev)[i-1] = cnt; 
        for(j = 0; j < n; j++){
-           if((*levels)[j] == i){
+           if(levels[j] == i){
                (*jlev)[cnt] = j;
                cnt++;
            }
        }
     }
+    delete[] levels;
 }
 
 /*
  * Default double comparison is not accurate enough using the code comparison found here instead:
  * https://stackoverflow.com/questions/17333/what-is-the-most-effective-way-for-float-and-double-comparison
  */
-bool AreSame(double a, double b, double epsilon, double relth= FLT_MIN)
+bool AreSame(double a, double b, double epsilon)
 {
-    if (a == b) return true;
-
-    auto diff = abs(a-b);
+    //if (a == b) return true;
+    /*auto diff = abs(a-b);
     auto norm = min((abs(a) + abs(b)), numeric_limits<double>::max());
-    return diff < max(relth, epsilon * norm);
-    //return fabs(a - b) < EPSILON;
+    return diff < max(relth, epsilon * norm);*/
+    return fabs(a - b) < epsilon;
 }
 
 int main(int argc, char *argv[]){
@@ -211,16 +216,16 @@ int main(int argc, char *argv[]){
     double *Lx; 
     int *Lp, *Li;                           // Lx, Lp, and Li arrays as described in the handout
     double *x;                              // Right hand side vector, b
-    int n;                                  // Dimension of the matrix read from input file
-    int *levels;                            // Array that maps the known at index i to its level 
+    int n;                                // Dimension of the matrix read from input file
     int *jlev;                              // Array that lists the unknowns in ascending order of their levels
     int *ilev;                              // Array that contains the pointers to the levels in jlev
     int nlev;                               // nlev is the number of levels
     double epsilon = 128 * FLT_EPSILON;     // Epsilon used for comparing flaots
+    double *tmp;                            // Array used for sanity checking
 
     std::vector<int> non_zero;
     create_csc(argv[1], argv[2], &Lp, &Li, &Lx, n, &x, non_zero);
-    create_level_set(n, &Lp, &Li, &levels, &jlev, &ilev, nlev, non_zero);
+    create_level_set(n, &Lp, &Li, &jlev, &ilev, nlev, non_zero);
 
     //Copying right handside vector for sanity check
     double *y = new double[n];              // vector used for sanity check
@@ -230,11 +235,14 @@ int main(int argc, char *argv[]){
 
     //TODO: Does a triangular solve
     //sptrsv_csc(n, Lp, Li, Lx, &x);
-    parallel_sptrsv_csc(n, Lp, Li, Lx, &x, nlev, ilev, jlev);
+    parallel_sptrsv_csc(n, Lp, Li, Lx, x, nlev, ilev, jlev);
+    
 
     //TODO: sanity check using spmv
-    double tmp[n] = {0};
+    tmp = new double[n];
+    std::fill(tmp, tmp+n, 0.);
     spmv_csc(n, Lp, Li, Lx, x, tmp);
+
     
     for(int i = 0; i < n; i++){
         if (!AreSame(y[i], tmp[i], epsilon)){
@@ -244,6 +252,13 @@ int main(int argc, char *argv[]){
         }
     }
     printf("Passed!\n");
+
+    delete[] Lx;
+    delete[] Lp;
+    delete[] Li;
+    delete[] x;
+    delete[] tmp;
+
 
     return 1;
 }
