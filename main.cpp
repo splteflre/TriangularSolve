@@ -1,4 +1,6 @@
-#include "starter.h"
+//#include "starter.h"
+#include "util.h"
+#include "matrix_solve.h"
 
 
 int main(int argc, char *argv[]){
