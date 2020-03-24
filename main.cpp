@@ -1,6 +1,5 @@
-//#include "starter.h"
-#include "util.h"
-#include "matrix_solve.h"
+#include "util/util.h"
+#include "matrix_solve/matrix_solve.h"
 
 
 int main(int argc, char *argv[]){
@@ -23,8 +22,8 @@ int main(int argc, char *argv[]){
     double *tmp;                            // Array used for sanity checking
 
     std::vector<int> non_zero;
-    create_csc(argv[1], argv[2], &Lp, &Li, &Lx, n, &x, non_zero);
-    create_level_set(n, &Lp, &Li, &jlev, &ilev, nlev, non_zero);
+    util::create_csc(argv[1], argv[2], &Lp, &Li, &Lx, n, &x, non_zero);
+    util::create_level_set(n, &Lp, &Li, &jlev, &ilev, nlev, non_zero);
 
     //Copying right handside vector for sanity check
     double *y = new double[n];              // vector used for sanity check
@@ -44,7 +43,7 @@ int main(int argc, char *argv[]){
 
     
     for(int i = 0; i < n; i++){
-        if (!AreSame(y[i], tmp[i], epsilon)){
+        if (!util::AreSame(y[i], tmp[i], epsilon)){
             printf("failed for unknown %d\n", i+1);
             printf("x: %f, y: %f\n", y[i], tmp[i]);
             return 1;

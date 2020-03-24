@@ -1,4 +1,5 @@
 #include <omp.h>
+#include <stdio.h>
 #include <algorithm> 
 #include <vector>
 #include <math.h>
