@@ -21,4 +21,4 @@ util.o: util/util.cpp util/util.h
 	$(CPP) $(CPPFLAGS) -c util/util.cpp
 
 clean:
-	rm main.o matrix_solve.o util.o solve
+	rm -f main.o matrix_solve.o util.o solve
