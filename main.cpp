@@ -24,11 +24,12 @@ int main(int argc, char *argv[]){
     double *tmp;                            // temp vector for storing old x value, used for sanity checking
 
     std::vector<int> non_zero;
+
     util::create_csc(argv[1], argv[2], &Lp, &Li, &Lx, n, &x, non_zero);
     util::create_level_set(n, &Lp, &Li, &jlev, &ilev, nlev, non_zero);
 
     //Copying right handside vector for sanity check
-    tmp = new double[n];              // vector used for sanity check
+    tmp = new double[n];                    // vector used for sanity check
     for(int i = 0; i < n; i++){
        tmp[i] = x[i]; 
     }
@@ -36,8 +37,8 @@ int main(int argc, char *argv[]){
     //TODO: Does a triangular solve
     //sptrsv_csc(n, Lp, Li, Lx, x);
     parallel_sptrsv_csc(n, Lp, Li, Lx, x, nlev, ilev, jlev);
-    
 
+    
     //TODO: sanity check using spmv
     y = new double[n];
     std::fill(y, y+n, 0.);
@@ -53,7 +54,6 @@ int main(int argc, char *argv[]){
         }
     }
     printf("Passed!\n");
-
     delete[] Lx;
     delete[] Lp;
     delete[] Li;
