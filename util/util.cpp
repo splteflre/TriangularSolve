@@ -1,5 +1,7 @@
 #include "util.h"
 
+namespace util{
+
 /*
  * Default double comparison is not accurate enough using the code comparison found here instead:
  * https://stackoverflow.com/questions/17333/what-is-the-most-effective-way-for-float-and-double-comparison
@@ -118,4 +120,6 @@ void create_level_set(int n, int **Lp, int **Li, int **jlev, int **ilev, int &nl
         }
     }
     delete[] levels;
+}
+
 }
