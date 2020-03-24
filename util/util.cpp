@@ -12,9 +12,9 @@ namespace util
         // Testing different floating point comparison methods
         //return a == b;
         //double relth = FLT_MIN;
-        //auto diff = abs(a-b);
-        //auto norm = min((abs(a) + abs(b)), numeric_limits<double>::max());
-        //return diff < max(relth, epsilon * norm);
+        //double diff = std::abs(a-b);
+        //double norm = std::min((abs(a) + abs(b)), std::numeric_limits<double>::max());
+        //return diff < std::max(relth, epsilon * norm);
 
         return fabs(a - b) < epsilon;
     }
