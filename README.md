@@ -18,5 +18,6 @@ in lower triangular form and second being the RHS vector.
 e.g.
 
 $make
-$./solve \n
+$./solve
+
 tests/test.mtx tests/test_b.mtx
