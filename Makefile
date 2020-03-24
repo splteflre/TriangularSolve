@@ -2,11 +2,12 @@
 
 # *****************************************************
 # Variables to control Makefile operation
-CPP = /usr/local/opt/llvm/bin/clang++
-CPPFLAGS = -I/usr/local/opt/llvm/include -fopenmp
-LDFLAGS = -L/usr/local/opt/llvm/lib
+
+CPP = g++
+CPPFLAGS = -Wall -O3 -fopenmp
 
 # ****************************************************
+
 solve: main.o matrix_solve.o util.o
 	$(CPP) $(CPPFLAGS) -o solve main.o matrix_solve.o util.o 
 
