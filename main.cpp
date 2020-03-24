@@ -39,7 +39,8 @@ int main(int argc, char *argv[]){
     //TODO: sanity check using spmv
     tmp = new double[n];
     std::fill(tmp, tmp+n, 0.);
-    spmv_csc(n, Lp, Li, Lx, x, tmp);
+    //spmv_csc(n, Lp, Li, Lx, x, tmp);
+    parallel_spmv_csc(n, Lp, Li, Lx, x, tmp);
 
     
     for(int i = 0; i < n; i++){

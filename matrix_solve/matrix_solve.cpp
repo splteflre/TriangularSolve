@@ -64,6 +64,30 @@ void spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
 }
 
 //TODO2: parallel spmv_csc
+void parallel_spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
+        const double *x, double *y) {
+
+    int i, j;
+    #pragma omp parallel num_threads(1)
+    {
+        double *priv_y = new double[n];
+        std::fill(priv_y, priv_y + n, 0.);
+
+        #pragma omp parallel for 
+        for (i = 0; i < n; i++) {
+            for (j = Ap[i]; j < Ap[i + 1]; j++) {
+                priv_y[Ai[j]] += Ax[j] * x[i];
+            }
+        }
+        #pragma omp critical
+        {
+            for(int i=0;  i< n; ++i) {
+                y[i] += priv_y[i];
+            }
+            delete[] priv_y;
+        }
+    }  
+}
 
 
 //TODO3: Serial sptrsv_csr
