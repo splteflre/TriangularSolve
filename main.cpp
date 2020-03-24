@@ -14,7 +14,7 @@ int main(int argc, char *argv[]){
     double *Lx; 
     int *Lp, *Li;                           // Lx, Lp, and Li arrays as described in the handout
     double *x;                              // Right hand side vector, b
-    int n;                                // Dimension of the matrix read from input file
+    int n;                                  // Dimension of the matrix read from input file
     int *jlev;                              // Array that lists the unknowns in ascending order of their levels
     int *ilev;                              // Array that contains the pointers to the levels in jlev
     int nlev;                               // nlev is the number of levels
