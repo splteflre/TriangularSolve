@@ -26,27 +26,21 @@ void sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x) {
 void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nlev, int *ilev, int *jlev) {
     int m, j, k, i;
 
-    #pragma omp parallel 
-    {
-        #pragma omp single nowait
-        {
-            double start_time = omp_get_wtime();
-            for(m = 0; m < nlev; m++){
-                #pragma omp parallel for schedule(static)
-                for(k = ilev[m]; k < ilev[m+1]; k++){
-                    i = jlev[k];
-                    x[i] /= Lx[Lp[i]]; 
-                    for(j = Lp[i] + 1; j < Lp[i+1]; j++){
-                        #pragma omp atomic
-                        x[Li[j]] -= Lx[j] * x[i];
-                    }
-                }
+    double start_time = omp_get_wtime();
+    for(m = 0; m < nlev; m++){
+        #pragma omp parallel for schedule(static)
+        for(k = ilev[m]; k < ilev[m+1]; k++){
+            i = jlev[k];
+            x[i] /= Lx[Lp[i]]; 
+            for(j = Lp[i] + 1; j < Lp[i+1]; j++){
+                #pragma omp atomic
+                x[Li[j]] -= Lx[j] * x[i];
             }
-            double end_time = omp_get_wtime();
-            double elapsed_time = end_time - start_time;
-            printf("total time: %f\n", elapsed_time);
         }
     }
+    double end_time = omp_get_wtime();
+    double elapsed_time = end_time - start_time;
+    printf("total time: %f\n", elapsed_time);
 
     // Free jlev and ilev since they are no longer needed
     delete[] jlev;
