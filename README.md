@@ -9,3 +9,13 @@ The make file, Makefile, targets most Ubuntu environments. Makefile2 is specific
 for MacOS since Apple's default clang compiler have trouble compiling openmp. To work
 around this I downloaded llvm and have been using the llvm clang on my Mac. 
 
+Instructions:
+
+To run the code do make in the command line. The make file should generate an executable
+called 'solve'. Solve takes in two arguements the first one being the name of the matrix
+in lower triangular form and second being the RHS vector.
+
+e.g.
+
+$make
+$./solve tests/test.mtx tests/test_b.mtx

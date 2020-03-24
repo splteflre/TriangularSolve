@@ -7,6 +7,7 @@ int main(int argc, char *argv[]){
     printf("argc: %d\n", argc);
     if(argc != 3){
         printf("wrong # of args\n");
+        printf("Usage: solve <Lower Triangular Matrix> <RHS vector>\n");
         return 0;
     }
 
