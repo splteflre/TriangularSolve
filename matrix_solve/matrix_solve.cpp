@@ -28,7 +28,7 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nle
 
     double start_time = omp_get_wtime();
     for(m = 0; m < nlev; m++){
-        #pragma omp parallel for schedule(static)
+        #pragma omp parallel for private(j,k,i) schedule(static)
         for(k = ilev[m]; k < ilev[m+1]; k++){
             i = jlev[k];
             x[i] /= Lx[Lp[i]]; 
@@ -71,12 +71,13 @@ void parallel_spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
     {
         //double *priv_y = new double[n];
         //std::fill(priv_y, priv_y + n, 0.);
+        int i, j;
 
         // Use atomic instead of reduction, reduction seems to pop the 
         // stack sometimes
-        #pragma omp parallel for 
-        for (int i = 0; i < n; i++) {
-            for (int j = Ap[i]; j < Ap[i + 1]; j++) {
+        #pragma omp parallel for private(i, j)
+        for (i = 0; i < n; i++) {
+            for (j = Ap[i]; j < Ap[i + 1]; j++) {
                 //priv_y[Ai[j]] += Ax[j] * x[i];
                 #pragma omp atomic
                 y[Ai[j]] += Ax[j] * x[i];
