@@ -70,7 +70,6 @@ void spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
 void parallel_spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
         const double *x, double *y) {
 
-    int i, j;
     #pragma omp parallel num_threads(1)
     {
         //double *priv_y = new double[n];
@@ -79,8 +78,8 @@ void parallel_spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
         // Use atomic instead of reduction, reduction seems to pop the 
         // stack sometimes
         #pragma omp parallel for 
-        for (i = 0; i < n; i++) {
-            for (j = Ap[i]; j < Ap[i + 1]; j++) {
+        for (int i = 0; i < n; i++) {
+            for (int j = Ap[i]; j < Ap[i + 1]; j++) {
                 //priv_y[Ai[j]] += Ax[j] * x[i];
                 #pragma omp atomic
                 y[Ai[j]] += Ax[j] * x[i];
