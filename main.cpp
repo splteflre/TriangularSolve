@@ -35,15 +35,15 @@ int main(int argc, char *argv[]){
     }
 
     //TODO: Does a triangular solve
-    //sptrsv_csc(n, Lp, Li, Lx, x);
-    parallel_sptrsv_csc(n, Lp, Li, Lx, x, nlev, ilev, jlev);
+    sptrsv_csc(n, Lp, Li, Lx, x);
+    //parallel_sptrsv_csc(n, Lp, Li, Lx, x, nlev, ilev, jlev);
 
     
     //TODO: sanity check using spmv
     y = new double[n];
     std::fill(y, y+n, 0.);
-    //spmv_csc(n, Lp, Li, Lx, x, y);
-    parallel_spmv_csc(n, Lp, Li, Lx, x, y);
+    spmv_csc(n, Lp, Li, Lx, x, y);
+    //parallel_spmv_csc(n, Lp, Li, Lx, x, y);
 
     
     for(int i = 0; i < n; i++){
