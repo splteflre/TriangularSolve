@@ -26,6 +26,7 @@ void sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x) {
 void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nlev, int *ilev, int *jlev) {
     int m, j, k, i;
 
+    // Does a lower triangle solve iterating by levels
     double start_time = omp_get_wtime();
     for(m = 0; m < nlev; m++){
         #pragma omp parallel for private(j,k,i) schedule(static)

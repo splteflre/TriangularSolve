@@ -32,6 +32,7 @@ namespace util
         std::ifstream bin(b);
         while (bin.peek() == '%') bin.ignore(2048, '\n');  // Ignore comments
 
+        // Read in vector info and initialize arrays
         bin >> R >> C >> num_entry;
         *x = new double[R]; 
         visited = new int[R];
@@ -42,7 +43,7 @@ namespace util
             bin >> r >> c >> data;
             (*x)[r-1] = data;
             non_zero.push_back(r-1);
-            visited[r-1] = 1;
+            visited[r-1] = 1;        // Add non-zero RHS entry to visited array, used for prunning iteration space
         }
         bin.close();
 
@@ -50,7 +51,7 @@ namespace util
         std::ifstream fin(matrix);
         while (fin.peek() == '%') fin.ignore(2048, '\n');  // Ignore comments
 
-        // Initialize Lx and fill with zero
+        // Initialize arrays used for csc and fill with zero
         fin >> R >> C >> num_entry;   
         n = R;
         *Lp = new int[n+1];                    
