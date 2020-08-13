@@ -51,7 +51,16 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nle
 
 /*
  * Computes y = A*x where A is a sparse matrix {n, Ap, Ai, Ax} and 
- * x and y are vectors
+ * x and y are vectors for CSR
+ *
+ * Inputs:
+ * Ap : the column pointer of A
+ * Ai : the row index of A 
+ * Ax : the values of A 
+ * x : is a dense vector 
+ *
+ * Output:
+ * y : is a dense vector that stores the result of multiplication
  */
 void spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
         const double *x, double *y) {
@@ -96,8 +105,32 @@ void parallel_spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
 }
 
 
-//TODO3: Serial sptrsv_csr
+//TODO: #3 Serial sptrsv_csr
 
-//TODO4: Serial spmv_csr
+/*
+ * Computes y = A*x where A is a sparse matrix {n, Ap, Ai, Ax} and 
+ * x and y are vectors for CSR
+ *
+ * Inputs:
+ * Ap : the row pointer of A
+ * Ai : the column index of A 
+ * Ax : the values of A 
+ * x : is a dense vector 
+ *
+ * Output:
+ * y : is a dense vector that stores the result of multiplication
+ */
+void spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
+        const double *x, double *y) {
+
+    int i, j;
+    for (i = 0; i < n; i++) {
+        for (j = Ap[i]; j < Ap[i + 1]; j++) {
+            y[Ai[j]] += Ax[j] * x[i];
+        }
+    }  
+}
+
+//TODO: #5 Parallel spmv_csr
 
 
