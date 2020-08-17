@@ -27,25 +27,13 @@ void sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x) {
     printf("\n");
     */
 
-    printf("total time: %f\n", elapsed_time);
+    printf("serial CSC total time: %f\n", elapsed_time);
 
 }
 
 //TODO1: parallel sptrsv_csc
 void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nlev, int *ilev, int *jlev) {
     int m, j, k, i;
-
-    printf("\nnlev: %d\n", nlev);
-
-    printf("\n ilev \n");
-    for(int i = 0; i < nlev + 1; i++){
-        printf("%d ", ilev[i]);
-    }
-    printf("\n jlev \n");
-    for(int i = 0; i < n; i++){
-        printf("%d ", jlev[i]);
-    }
-    printf("\n");
 
     // Does a lower triangle solve iterating by levels
     double start_time = omp_get_wtime();
@@ -63,15 +51,14 @@ void parallel_sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x, int nle
     double end_time = omp_get_wtime();
     double elapsed_time = end_time - start_time;
 
-    
-    printf("\n==================\n");
+    /*
+    printf("\nx\n");
     for(int i = 0; i < n; i++){
         printf("%f ", x[i]);
     }
     printf("\n");
-    
-
-    printf("total time: %f\n", elapsed_time);
+    */
+    printf("parallel CSC total time: %f\n", elapsed_time);
 
     // Free jlev and ilev since they are no longer needed
     delete[] jlev;
@@ -100,6 +87,19 @@ void spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
         for (j = Ap[i]; j < Ap[i + 1]; j++) {
             y[Ai[j]] += Ax[j] * x[i];
         }
+    }  
+}
+
+void spmv_csr(int n, const int *Ap, const int *Ai, const double *Ax,
+        const double *x, double *y) {
+
+    int i, j, sum = 0;
+    for (i = 0; i < n; i++) {
+        sum = 0;
+        for (j = Ap[i]; j < Ap[i + 1]; j++) {
+            sum += Ax[j] * x[Ai[j]];
+        }
+        y[i] = sum;
     }  
 }
 
@@ -135,30 +135,6 @@ void parallel_spmv_csc(int n, const int *Ap, const int *Ai, const double *Ax,
 }
 
 
-/*
- * Computes y = A*x where A is a sparse matrix {n, Ap, Ai, Ax} and 
- * x and y are vectors for CSR
- *
- * Inputs:
- * Ap : the row pointer of A
- * Ai : the column index of A 
- * Ax : the values of A 
- * x : is a dense vector 
- *
- * Output:
- * y : is a dense vector that stores the result of multiplication
- */
-void spmv_csr(int n, const int *Ap, const int *Ai, const double *Ax,
-        const double *x, double *y) {
-
-    int i, j;
-    for (i = 0; i < n; i++) {
-        for (j = Ap[i]; j < Ap[i + 1]; j++) {
-            y[Ai[j]] += Ax[j] * x[i];
-        }
-    }  
-}
-
 /*      
  * Solves a sparse lower triangular solve (Lx=b) which is stored in CSC format.
  * The sparse matrix is stored in {n, Lp, Li, Lx}
@@ -189,33 +165,12 @@ void sptrsv_csr(int n, int *Lp, int *Li, double *Lx, double *x, double* d) {
     double end_time = omp_get_wtime();
     double elapsed_time = end_time - start_time;
     
-    /*
-    printf("\n==================\n");
-    for(int i = 0; i < n; i++){
-        printf("%f ", x[i]);
-    }
-    printf("\n");
-    */
-
-    printf("total time: %f\n", elapsed_time);
+    printf("serial CSR total time: %f\n", elapsed_time);
 
 }
 
-//TODO: #5 Parallel spmv_csr
 void parallel_sptrsv_csr(int n, int *Lp, int *Li, double *Lx, double *x, int nlev, int *ilev, int *jlev, double* d) {
     int m, j, k, i;
-
-    printf("\nnlev: %d\n", nlev);
-
-    printf("\n ilev \n");
-    for(int i = 0; i < nlev + 1; i++){
-        printf("%d ", ilev[i]);
-    }
-    printf("\n jlev \n");
-    for(int i = 0; i < n; i++){
-        printf("%d ", jlev[i]);
-    }
-    printf("\n");
 
     // Does a lower triangle solve iterating by levels
     double start_time = omp_get_wtime();
@@ -224,9 +179,6 @@ void parallel_sptrsv_csr(int n, int *Lp, int *Li, double *Lx, double *x, int nle
         for(k = ilev[m]; k < ilev[m+1]; k++){
             i = jlev[k];
             for (j = Lp[i]; j < Lp[i + 1] - 1; j++) {
-
-                printf("j: %d, Lx[j]: %f, x[Li[j]]: %f\n", j, Lx[j], x[Li[j]]);
-
                 x[i] -= Lx[j] * x[Li[j]];
             }
             x[i] /= d[i];
@@ -235,13 +187,15 @@ void parallel_sptrsv_csr(int n, int *Lp, int *Li, double *Lx, double *x, int nle
     double end_time = omp_get_wtime();
     double elapsed_time = end_time - start_time;
 
-    printf("\n==================\n");
+    /*
+    printf("\nx\n");
     for(int i = 0; i < n; i++){
         printf("%f ", x[i]);
     }
     printf("\n");
+    */
 
-    printf("total time: %f\n", elapsed_time);
+    printf("parallel CSR total time: %f\n", elapsed_time);
 
     // Free jlev and ilev since they are no longer needed
     delete[] jlev;

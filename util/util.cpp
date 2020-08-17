@@ -113,19 +113,7 @@ namespace util
         }
         fin.close();
 
-        printf("levels \n");
-        for(int i = 0; i < n; i++){
-            printf("%d ", visited[i]);
-        }
-        printf("\n");
-
         std::sort(non_zero.begin(), non_zero.end());
-
-        printf("non_zero ");
-        for(int i = 0; i <non_zero.size(); i++){
-            printf("%d ", non_zero[i]);
-        }
-        printf("\n");
 
     }
 
@@ -172,13 +160,6 @@ namespace util
             }
             nlev = std::max(nlev, levels[n-1]);
         }
-
-        printf("\n=======================\n");
-        for(int z = 0; z < n; z++){
-            printf("i %d, levels %d\n", z,  levels[z]);
-        }
-        printf("\n=======================\n");
-
 
         (*ilev) = new int[nlev+1];
         std::fill(*ilev, *ilev + nlev + 1, 0);
